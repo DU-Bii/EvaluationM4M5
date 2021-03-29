@@ -29,3 +29,7 @@ Les parties 1 à 4 seront notées pour l'évaluation du module 4, les parties 5 
 ## Github Pages
 
 https://pages.github.com/
+
+## Markdown
+
+[Les bases du langage](https://github.com/adam-p/markdown-here/wiki/Markdown-Cheatsheet)
