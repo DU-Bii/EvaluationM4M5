@@ -10,7 +10,7 @@ Le contenu de cette archive doit être copié dans vôtre dépôt git.
 
 Suivez les consignes indiquées dans le fichier Rmd et complétez les chunks vides pour tracer vos analyses et répondre aux questions qui vous sont posées.
 
-[lien vers la consigne](Evaluation.html)
+[Template HTML](https://du-bii.github.io/EvaluationM4M5/Evaluation.html)
 
 Pour générer votre propre rapport, utilisez le bouton `Knit to HTML`. N'oubliez pas de changer les noms et les affiliations des auteurs du document. Si vous le souhaitez, vous pouvez personnaliser ce rapport avec d'autres logos...
 
