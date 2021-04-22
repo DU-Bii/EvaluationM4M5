@@ -49,4 +49,26 @@ a {
 
 code:not(.hljs) {
   color: blue !important;
+  white-space: initial;
+}
+
+.alert{
+  position: relative;
+  padding: .75rem 1.25rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  border-radius: .25rem;
+}
+
+.comment{
+  color: #155724;
+  background-color: #d4edda;
+  border-color: #c3e6cb;
+}
+
+.comment:before{
+  font-family: "Font Awesome 5 Free";
+  content: '\f4ad';
+  font-weight: 900;
+  margin-right: 5px;
 }

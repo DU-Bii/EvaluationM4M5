@@ -10,7 +10,7 @@ output:
       css: [css/style.css, 'https://use.fontawesome.com/releases/v5.0.9/css/all.css']
       self_contained: true
       number_sections: false
-      code_folding: "hide"
+      code_folding: "show"
       toc: true
       toc_depth: 3
       toc_float: true
@@ -32,6 +32,8 @@ Complétez ce document en remplissant les chunks vides pour écrire le code qui 
 N'hésitez pas à commenter votre code, enrichier le rapport en y insérant des résultats ou des graphiques   pour expliquer votre démarche. N'oubliez pas les **bonnes pratiques** pour une recherche **reproductible** !
 Nous souhaitons à minima que l'analyse soit reproductible sur le cluster de l'IFB.
 
+<div class="alert comment">Les informations essentielles que nous attendions étaient la version des outils utilisés et le détail des commandes lancées. L'organisation des répertoires est propre à chacun, l'important étant d'organiser les fichiers de façon intelligible.</div>
+
 # Introduction {-}
 
 Vous allez travailler sur des données de reséquençage d'un génome bactérien : _Bacillus subtilis_. Les données sont issues de cet article :  
@@ -45,32 +47,41 @@ Vous allez travailler sur des données de reséquençage d'un génome bactérien
 ```{bash}
 mkdir ~/EVALUATION
 cd ~/EVALUATION
+mkdir RAW_DATA REFERENCES QC CLEANING MAPPING
 ```
 
 ## Téléchargement des données brutes
 
-* Récupérez les fichiers FASTQ issus du run `SRR10390685` grâce à l'outil <strong class="tool">sra-tools</strong> @sratoolkit
+* Récupérez les fichiers FASTQ issus du run **SRR10390685** grâce à l'outil <strong class="tool">sra-tools</strong> @sratoolkit
 
 ```{bash}
-module load sra-tools
+module load sra-tools/2.10.3
 fasterq-dump --version
 # "fasterq-dump" version 2.10.3
-srun --cpus-per-task 8 fasterq-dump -S -p SRR10390685 --outdir . --threads 8
+srun --cpus-per-task 8 fasterq-dump -S -p SRR10390685 --outdir RAW_DATA --threads 8
+cd RAW_DATA
 gzip SRR10390685_1.fastq
 gzip SRR10390685_2.fastq 
+cd -
 ```
 
 * Combien de reads sont présents dans les fichiers R1 et R2 ?
 
 ```{bash}
-zcat SRR10390685_1.fastq.gz | echo $((`wc -l`/4))
-zcat SRR10390685_2.fastq.gz | echo $((`wc -l`/4))
-ou
-module load seqkit
-seqkit stat SRR10390685_*.fastq.gz
+cd ~/EVALUATION/RAW_DATA
+
+module load seqkit/0.14.0
+seqkit stat *.fastq.gz > seqkit.tsv
+head seqkit.tsv
+
 # file                    format  type   num_seqs        sum_len  min_len  avg_len  max_len
 # SRR10390685_1.fastq.gz  FASTQ   DNA   7,066,055  1,056,334,498       35    149.5      151
 # SRR10390685_2.fastq.gz  FASTQ   DNA   7,066,055  1,062,807,718      130    150.4      151
+
+# other solution but less generic
+
+# zcat SRR10390685_1.fastq.gz | echo $((`wc -l`/4))
+# zcat SRR10390685_2.fastq.gz | echo $((`wc -l`/4))
 ```
 
 Les fichiers FASTQ contiennent <code>7 066 055</code> reads.
@@ -78,6 +89,7 @@ Les fichiers FASTQ contiennent <code>7 066 055</code> reads.
 * Téléchargez le génome de référence de la souche ASM904v1 de _Bacillus subtilis_ disponible à [cette adresse](https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.fna.gz)
 
 ```{bash}
+cd ~/EVALUATION/REFERENCES
 wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.fna.gz
 gzip -d GCF_000009045.1_ASM904v1_genomic.fna.gz
 ```
@@ -85,11 +97,12 @@ gzip -d GCF_000009045.1_ASM904v1_genomic.fna.gz
 * Quelle est la taille de ce génome ?
 
 ```{bash}
-module load seqkit
+cd ~/EVALUATION/REFERENCES
+module load seqkit/0.14.0
 seqkit version
 # seqkit v0.14.0
 
-zcat  GCF_000009045.1_ASM904v1_genomic.fna |seqkit stat 
+seqkit stat GCF_000009045.1_ASM904v1_genomic.fna
 # file                                  format  type  num_seqs    sum_len    min_len    avg_len    max_len
 # GCF_000009045.1_ASM904v1_genomic.fna  FASTA   DNA          1  4,215,606  4,215,606  4,215,606  4,215,606
 ```
@@ -99,8 +112,8 @@ La taille de ce génome est de <code>4 215 606</code> paires de bases.
 * Téléchargez l'annotation de la souche ASM904v1 de _Bacillus subtilis_ disponible à [cette adresse](https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.gff.gz)
 
 ```{bash}
+cd ~/EVALUATION/REFERENCES
 wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/009/045/GCF_000009045.1_ASM904v1/GCF_000009045.1_ASM904v1_genomic.gff.gz
-
 ```
 
 * Combien de gènes sont connus pour ce génome ?
@@ -117,36 +130,41 @@ zgrep -v "^#" GCF_000009045.1_ASM904v1_genomic.gff.gz | awk '($3 == "gene")' |wc
 * Lancez l'outil <strong class="tool">fastqc</strong> @fastqc dédié à l'analyse de la qualité des bases issues d'un séquençage haut-débit
 
 ```{bash}
-module load fastqc
+cd ~/EVALUATION/QC
+module load fastqc/0.11.9
 fastqc --version
 # FastQC v0.11.9
 
-mkdir QC
-srun --cpus-per-task 8 fastqc SRR10390685_1.fastq.gz -o QC/ -t 8
-srun --cpus-per-task 8 fastqc SRR10390685_2.fastq.gz -o QC/ -t 8
+for i in ../RAW_DATA/*.fastq.gz ; do srun --cpus-per-task 8 fastqc $i -o . -t 8 ; done
 
-module load multiqc
+module load multiqc/1.9
 multiqc --version
 # multiqc, version 1.9
 
-srun multiqc -d QC -o QC
+srun multiqc -d . -o .
 
 ```
 
 * La qualité des bases vous paraît-elle satisfaisante ? Pourquoi ?
 
-La qualité des bases me paraît <code>... car ... comme le montre ...</code>
+La qualité des bases me paraît <code>satisfaisante car la qualité moyenne des bases est supérieure à 30 sur toute la longgueur des reads comme le montre le graphique Sequence Quality Histograms ou le graphique Per Sequence Quality Scores. De plus, il y a très peu de bases indéterminées (N).</code>
 
-Lien vers le [rapport MulitQC]()
+Lien vers le [rapport MulitQC](html/multiqc_report.html)
 
 * Est-ce que les reads déposés ont subi une étape de nettoyage avant d'être déposés ? Pourquoi ?
 
-<code>Oui/Non</code> car <code>...</code>
+<code>Oui,</code> car <code> la distribution de taille des reads (Sequence Length Distribution) montre que certains reads sont plus petits que 151, la longueur attendue. Néanmoins, cela représente très peu de reads donc ce n'est pas vraiment problématique. Il serait intéressant de trouver l'information des filtres appliqués (via la publication pour des données publiques ou via la plateforme de séquençage pour des données non publiées.</code>
 
 * Quelle est la profondeur de séquençage (calculée par rapport à la taille du génome de référence) ?
 
 ```{bash}
-(R1+R2) / Taille du génome
+Formule à appliquer :
+
+(length all R1 + length all R2) / Taille du génome
+
+soit ici:
+
+(1056334498+1062807718)/4215606
 ```
 
 La profondeur de séquençage est de : <code>`r (1056334498+1062807718)/4215606` X. </code>
@@ -156,14 +174,20 @@ La profondeur de séquençage est de : <code>`r (1056334498+1062807718)/4215606`
 Vous voulez maintenant nettoyer un peu vos lectures. Choisissez les paramètres de <strong class="tool">fastp</strong> qui vous semblent adéquats et justifiez-les.
 
 ```{bash}
-module load fastp
+cd ~/EVALUATION/CLEANING
+
+module load fastp/0.20.0
 fastp --version
 # fastp 0.20.0
 
-mkdir FASTP
-srun --cpus-per-task 8 fastp --in1 SRR10390685_1.fastq.gz --in2 SRR10390685_2.fastq.gz --out1 FASTP/SRR10390685_1.fastq.gz --out2 FASTP/SRR10390685_2.fastq.gz --html FASTP/fastp.html --thread 8 --cut_mean_quality 30 --cut_window_size 8 --length_required 100 --cut_tail --json FASTP/fastp.json
+srun --cpus-per-task 8 fastp --in1 ../RAW_DATA/SRR10390685_1.fastq.gz --in2 ../RAW_DATA/SRR10390685_2.fastq.gz --out1 SRR10390685_1.fastq.gz --out2 SRR10390685_2.fastq.gz --html fastp.html --thread 8 --cut_mean_quality 30 --cut_window_size 8 --length_required 100 --cut_tail --json fastp.json
 
-seqkit stat FASTP/SRR10390685_[12].fastq.gz.
+seqkit stat SRR10390685_[12].fastq.gz > seqkit.txt
+head seqkit.txt
+
+# file                    format  type   num_seqs      sum_len  min_len  avg_len  max_len
+# SRR10390685_1.fastq.gz  FASTQ   DNA   6,777,048  996,891,051      100    147.1      151
+# SRR10390685_2.fastq.gz  FASTQ   DNA   6,777,048  990,442,597      100    146.1      151
 ```
 
 Les paramètres suivants ont été choisis : 
@@ -172,8 +196,8 @@ Les paramètres suivants ont été choisis :
 |Parametre | Valeur | Explication |
 |----------|--------|-------------|
 | --cut_mean_quality | 30 | pour un score moyen dans la fenêtre glissante > 30 |
-| --cut_window_size | 8 | pour une taille de fenêtre glissante de 8
-| --length_required | 100 |pour ne garder que les reads de taille > 100
+| --cut_window_size | 8 | pour une taille de fenêtre glissante de 8 |
+| --length_required | 100 |pour ne garder que les reads de taille > 100 |
 | --cut_tail | | pour faire partir la fenêtre de l'extrémité 3' du read |
 
 
@@ -184,27 +208,29 @@ Ces paramètres ont permis de conserver <code>6 777 048</code> reads pairés, so
 Maintenant, vous allez aligner ces reads nettoyés sur le génome de référence à l'aide de <strong class="tool">bwa</strong> @bwa et <strong class="tool">samtools</strong> @samtools.
 
 ```{bash}
-module load samtools
+cd ~/EVALUATION/MAPPING
+
+module load samtools/1.10
 samtools --version
 # samtools 1.10
 # Using htslib 1.10.2
 
-module load bwa
+module load bwa/0.7.17
 bwa
 # Version: 0.7.17-r1188
 
-srun bwa index GCF_000009045.1_ASM904v1_genomic.fna.gz
-mkdir MAPPING
-srun --cpus-per-task=4 bwa mem GCF_000009045.1_ASM904v1_genomic.fna FASTP/SRR10390685_1.fastq.gz FASTP/SRR10390685_2.fastq.gz -t 3 | samtools view -hbS - > MAPPING/SRR10390685.bam
-srun samtools flagstat MAPPING/SRR10390685.bam > MAPPING/SRR10390685.bam.flagstat
-srun samtools sort MAPPING/SRR10390685.bam -o MAPPING/SRR10390685_sorted.bam
-srun samtools index MAPPING/SRR10390685_sorted.bam
+srun bwa index ../REFERENCES/GCF_000009045.1_ASM904v1_genomic.fna
+
+srun --cpus-per-task=4 bwa mem ../REFERENCES/GCF_000009045.1_ASM904v1_genomic.fna ../CLEANING/SRR10390685_1.fastq.gz ../CLEANING/SRR10390685_2.fastq.gz -t 3 | samtools view -hbS - > SRR10390685.bam
+srun samtools flagstat SRR10390685.bam > SRR10390685.bam.flagstat
+srun samtools sort SRR10390685.bam -o SRR10390685_sorted.bam
+srun samtools index SRR10390685_sorted.bam
 ```
 
 * Combien de reads ne sont pas mappés ?
 
 ```{bash}
-samtools view -f 4 -c MAPPING/SRR10390685.bam
+samtools view -f 4 -c SRR10390685.bam
 # 744540
 ```
 
@@ -215,14 +241,19 @@ samtools view -f 4 -c MAPPING/SRR10390685.bam
 
 Calculez le nombre de reads qui chevauchent avec au moins 50% de leur longueur le gène _trmNF_ grâce à l'outil <strong class="tool">bedtools</strong> @bedtools:
 
+<code>Pour répondre à cette question, je choisis de récupérer tous les reads qui chevauchent le gène en faisant l'intersection des reads du fichier BAM avec le fichier GFF3. Ensuite je compte le nombre de reads du fichier BAM généré.</code>
+
 ```{bash}
-module load bedtools
+cd ~/EVALUATION/MAPPING
+
+module load bedtools/2.29.2
 bedtools --version
 # bedtools v2.29.2
 
-grep trmNF GCF_000009045.1_ASM904v1_genomic.gff | awk '$3=="gene"' > trmNF.gff3
-bedtools intersect -a MAPPING/SRR10390685_sorted.bam -b trmNF.gff3.gz -f 0.5 > SRR10390685_on_trmNF.bam
+zgrep trmNF ../REFERENCES/GCF_000009045.1_ASM904v1_genomic.gff.gz | awk '$3=="gene"' > trmNF.gff3
+bedtools intersect -a SRR10390685_sorted.bam -b trmNF.gff3 -f 0.5 > SRR10390685_on_trmNF.bam
 samtools view -c SRR10390685_on_trmNF.bam
+# 2801
 ```
 
 <code>2 801</code> reads chevauchent le gène d'intérêt.
@@ -232,7 +263,52 @@ samtools view -c SRR10390685_on_trmNF.bam
 
 Utilisez <strong class="tool">IGV</strong> @igv sous [sa version en ligne](https://igv.org/app/) pour visualiser les alignements sur le gène. Faites une capture d'écran du gène entier.
 
+<code>Pour répondre à cette question, il faut récupérer en local le fichier BAM et son index (.bam.bai) ainsi que le génome de référence, et éventuellement le GFF3 du gène d'intérêt pour observer les parties flanquantes.</code>
+
 ![IGV : couverture du gène trmNF](images/IGV_snapshot.png)
 
+## Synthèse
+
+    tree ~/EVALUATION
+    EVALUATION
+    ├── CLEANING
+    │   ├── fastp.html
+    │   ├── fastp.json
+    │   ├── seqkit.txt
+    │   ├── SRR10390685_1.fastq.gz
+    │   └── SRR10390685_2.fastq.gz
+    ├── MAPPING
+    │   ├── SRR10390685.bam
+    │   ├── SRR10390685.bam.flagstat
+    │   ├── SRR10390685_on_trmNF.bam
+    │   ├── SRR10390685_sorted.bam
+    │   ├── SRR10390685_sorted.bam.bai
+    │   └── trmNF.gff3
+    ├── QC
+    │   ├── multiqc_data
+    │   │   ├── multiqc_data.json
+    │   │   ├── multiqc_fastqc.txt
+    │   │   ├── multiqc_general_stats.txt
+    │   │   ├── multiqc.log
+    │   │   └── multiqc_sources.txt
+    │   ├── multiqc_report.html
+    │   ├── SRR10390685_1_fastqc.html
+    │   ├── SRR10390685_1_fastqc.zip
+    │   ├── SRR10390685_2_fastqc.html
+    │   └── SRR10390685_2_fastqc.zip
+    ├── RAW_DATA
+    │   ├── seqkit.tsv
+    │   ├── SRR10390685_1.fastq.gz
+    │   └── SRR10390685_2.fastq.gz
+    └── REFERENCES
+        ├── GCF_000009045.1_ASM904v1_genomic.fna
+        ├── GCF_000009045.1_ASM904v1_genomic.fna.amb
+        ├── GCF_000009045.1_ASM904v1_genomic.fna.ann
+        ├── GCF_000009045.1_ASM904v1_genomic.fna.bwt
+        ├── GCF_000009045.1_ASM904v1_genomic.fna.pac
+        ├── GCF_000009045.1_ASM904v1_genomic.fna.sa
+        └── GCF_000009045.1_ASM904v1_genomic.gff.gz
+    
+    6 directories, 31 files
 
 # References

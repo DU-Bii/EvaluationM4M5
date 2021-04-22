@@ -1,0 +1,147 @@
+---
+title: "QCM Modules 4 et 5"
+author: "Olivier Rué - Valentin Loux"
+subtitle: "DUBii 2021"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+    html_document:
+      css: [css/style.css, 'https://use.fontawesome.com/releases/v5.0.9/css/all.css']
+      self_contained: true
+      number_sections: false
+      code_folding: "hide"
+      toc: true
+      toc_depth: 3
+      toc_float: true
+      includes:
+        after_body: resources/footer.html
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(eval=FALSE, echo =TRUE, cache = FALSE, message = FALSE, warning = FALSE, cache.lazy = FALSE,
+                      fig.height = 3.5, fig.width = 10.5)
+```
+
+---
+
+#### Galaxy (sur une instance publique) permet :
+
+- [x] de lancer des outils bioinformatiques sans connaissance préalable de la ligne de commande
+- [ ] d'installer ses propres outils soi-même
+
+
+#### Github est conseillé pour y déposer : 
+
+
+- [x] son code
+- [ ] ses données de séquençage
+
+
+#### Quels outils sont dédiés au mapping de données RNAseq sur une référence ?
+
+
+- [x] Hisat2
+- [x] STAR
+- [ ] HTSeqCount
+- [ ] Trinity
+
+
+#### Le séquençage illumina en paired-end permet :
+
+
+- [x] de connaître la séquence des extrémités des fragments d'ADN de ma banque
+- [ ] de connaître la séquence entière des fragments de ma banque
+
+
+#### La qualité d'une base d'une base dans un fichier FASTQ :
+
+
+- [x] est codée sur un seul caractère
+- [ ] est toujours codée sur la même plage de caractères ASCII
+
+
+
+
+
+
+#### Dans un fichier SAM, le FLAG permet de savoir :
+
+
+- [ ] la qualité de mapping du read
+- [x] si le read est mappé
+- [x] si le read a sa paire mappée également
+- [x] si le read provient du fichier FASTQ contenant les R1
+
+
+#### Le format FASTQ comprend 2 lignes par read 
+
+
+- [ ] VRAI
+- [x] FAUX
+
+
+#### Tous les outils bioinformatiques sont multithreadés
+
+
+- [ ] VRAI
+- [x] FAUX
+
+
+#### En RNAseq, il est généralement préférable d'avoir des réplicats qu'une grande profondeur de séquençage ?
+
+
+- [x] VRAI
+- [ ] FAUX
+
+
+#### À quoi sert le séquençage orienté ("stranded") ?
+
+
+- [x] à différencier le brin d'origine des transcrits
+- [ ] à améliorer la qualité de séquençage des ARN
+- [ ] à diminuer le nombre d'étapes lors de la préparation de la banque de séquençage
+- [ ] à doubler la profondeur de séquençage
+
+
+#### Quelles sont les techniques couramment utilisées pour acquérir des données en métabolomique?
+
+
+- [x] résonance magnétique nucléaire
+- [x] spectrométrie de masse
+- [ ] résonance plasmonique de surface
+- [ ] microcalorimétrie
+
+
+#### Avec quelle technologie de séquençage est il possible de faire du séquençage d'ARN direct ?
+
+
+- [ ] Ion Torrent
+- [ ] Illumina
+- [ ] Pacific Biosciences
+- [x] Oxford nanopore
+
+
+#### J’ai généré 2 000 000 de paires de lectures de 150 ncucléotides.  La taille estimée de mon génome est 5 Mb. Quelle est ma profondeur  de séquençage  ?
+
+
+- [ ] 1200
+- [x] 120
+- [ ] 60
+- [ ] 6
+
+
+#### Quel est le débit maximal d'un séquenceur Illumina actuel  ?
+
+
+- [x] 6 Tb
+- [ ] 6 Gb
+- [ ] 600 Gb
+- [ ] 6 Pb
+
+
+#### Sachant que Q est le score de Qualité et P la probabilité d'avoir une erreur à une position donnée, comment se calcule la qualité ?
+
+
+- [ ] Q = 1/log(P)
+- [x] Q = -10 log10 P
+- [ ] Q = 1/(P*1000)
+- [ ] Q = 10-P
